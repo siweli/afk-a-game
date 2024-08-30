@@ -8,7 +8,7 @@ import numpy as np
 import threading
 import tkinter as tk
 
-__version__ = 'v2.3'
+__version__ = 'v2.4'
 __author__ = 'siwel'
 
 
@@ -77,16 +77,16 @@ def press_key(key, delay_1=1, delay_2=0.1, delay_3=1):
 
 
 # Define the script function to toggle (1.6s total)
-def my_script(status_label, dead_label):
+def my_script():
     global running, counter
     while running:
         # Check if dead
         colour = get_pixel_colour(868, 30)
         if colour == (255, 0, 0):
-            dead_label.config(text='Dead: Yes')
+            app.update_status(app.alive_status, 'Alive: ', 'False')
             press_key('space', 0.1, 0.05, 0.1)
         else:
-            dead_label.config(text='Dead: No')
+            app.update_status(app.alive_status, 'Alive: ', 'True')
 
         # Throw grenade
         press_key('q', 0.1, 0.05, 0.3)
@@ -101,31 +101,31 @@ def my_script(status_label, dead_label):
 
         time.sleep(0.1)  # Small sleep to reduce CPU usage
 
-    status_label.config(text='Status: Stopped')
+    app.update_status(app.toggle_status, 'Toggle: ', 'False')
 
 
 ##############################################################################################################################################################################################
 
 
 # Define the function to toggle the script
-def toggle_script(status_label, dead_label):
+def toggle_script():
     global running, script_thread
     if running:
         running = False
         if script_thread:
             script_thread.join()
-        status_label.config(text='Status: Stopped')
+        app.update_status(app.toggle_status, 'Toggle: ', 'False')
     else:
         running = True
-        status_label.config(text='Status: Running')
-        script_thread = threading.Thread(target=my_script, args=(status_label, dead_label))
+        app.update_status(app.toggle_status, 'Toggle: ', 'True')
+        script_thread = threading.Thread(target=my_script)
         script_thread.start()
 
 
 # Handle key presses
 def on_press(key):
     if key == toggle_key:
-        toggle_script(app.status, app.dead)
+        toggle_script()
     elif key == exit_key:
         print('Exiting program.')
         stop_script()
@@ -139,6 +139,7 @@ def stop_script():
     running = False
     if script_thread:
         script_thread.join()
+    app.close_window()
 
 
 ##############################################################################################################################################################################################
@@ -152,7 +153,9 @@ class App:
     # style settings
     clr_bg = '#111'
     clr_tx = '#fff'
-    clr_bd = '#ffaa00'
+    clr_bd = '#fa0'
+    clr_True = '#0f0'
+    clr_False=  '#f00'
 
     # font choice
     fnt_tb = ('Fixedsys', 12, 'bold')
@@ -183,11 +186,13 @@ class App:
             '*Label.Font': self.fn_main,
 
             # background colour
+            '*Text.Background': self.clr_bg,
             '*Label.Background': self.clr_bg,
             '*Frame.Background': self.clr_bg,
             '*Button.Background': self.clr_bg,
 
-            # foreground colour
+            # foreground colour#
+            '*Text.Foreground': self.clr_tx,
             '*Label.Foreground': self.clr_tx,
             '*Button.Foreground': self.clr_tx,
 
@@ -243,11 +248,13 @@ class App:
         status_frame = tk.Frame(content)
         status_frame.pack(expand=True, fill='both', pady=3)
 
-        status_label = tk.Label(status_frame, text='Status: Stopped')
-        status_label.pack(anchor='w')
+        toggle_status = tk.Text(status_frame, height=1, width=20, borderwidth=0)
+        toggle_status.pack(anchor='w')
+        self.update_status(toggle_status, 'Toggle: ', 'False')
 
-        dead_label = tk.Label(status_frame, text='Dead: No')
-        dead_label.pack(anchor='w')
+        alive_status = tk.Text(status_frame, height=1, width=20, borderwidth=0)
+        alive_status.pack(anchor='w')
+        self.update_status(alive_status, 'Alive: ', 'True')
 
 
         # instruction labels
@@ -257,9 +264,10 @@ class App:
             label = tk.Label(instruction_frame, text=instruction)
             label.pack(anchor='w')
 
+
         # setting as self to access outside of the app object
-        self.status = status_label
-        self.dead = dead_label
+        self.toggle_status = toggle_status
+        self.alive_status = alive_status
 
 
 
@@ -283,6 +291,33 @@ class App:
     # close the window
     def close_window(self):
         self.root.destroy()
+
+
+    # update status
+    def update_status(self, widget, status, value):
+        # enable widget to allow changes
+        widget.config(state=tk.NORMAL)
+        widget.delete("1.0", tk.END)
+
+        # insert new text
+        widget.insert(tk.END, status)
+        widget.insert(tk.END, value)
+        
+        # set status label
+        status_len = f'1.{len(status)}'
+        widget.tag_add('status', '1.0', status_len)
+        widget.tag_config('status', foreground=self.clr_tx, background=self.clr_bg)
+
+        # set the value label
+        value_len = f'1.{len(status) + len(value)}'
+        widget.tag_add('value', status_len, value_len)
+        if value == 'True':
+            widget.tag_config('value', foreground=self.clr_True, background=self.clr_bg)
+        elif value == 'False':
+            widget.tag_config('value', foreground=self.clr_False, background=self.clr_bg)
+        
+        # disable widget to set the changes
+        widget.config(state=tk.DISABLED)
 
 
 ##############################################################################################################################################################################################
