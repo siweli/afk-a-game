@@ -95,9 +95,9 @@ def my_script():
         counter += 1
         if counter % 25 == 0:
             print(f'Counter: {counter}')
-        if counter == max_count:
-            running = False
-            counter = 0
+        # if counter == max_count:
+        #     running = False
+        #     counter = 0
 
         time.sleep(0.1)  # Small sleep to reduce CPU usage
 
